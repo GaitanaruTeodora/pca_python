@@ -14,8 +14,10 @@ def nan_replace(t):
                 t[v].fillna(modulul, inplace=True)
 
 
-def tabelare_matrice(x, nume_linii=None, nume_coloane=None, out=None):
+def tabelare_matrice(x, nume_linii=None, nume_coloane=None, out=None,nume_instante=None):
     t = pd.DataFrame(x, nume_linii, nume_coloane)
     if out is not None:
         t.to_csv(out)
+    if nume_instante is not None:
+        t.index = nume_instante
     return t

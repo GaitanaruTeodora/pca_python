@@ -9,15 +9,16 @@
 ################################################################################
 from functii import tabelare_matrice
 from geopandas import GeoDataFrame
+import pandas as pd
 import numpy as np
-from grafice import plot_corelatii,corelograma
+from grafice import plot_corelatii,corelograma,plot_instante
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import main_window as mw
 import controller
 import acp
-from spatial import harta
+from spatial import plot_map
 import grafice
 import sys
 import functii
@@ -365,8 +366,6 @@ class Ui_MainWindow(object):
         self.btn_corelogramaCom.setText(QCoreApplication.translate("MainWindow", u"Corelograma comunalitati", None))
 
     # retranslateUi
-
-
 class Frame(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(Frame,self).__init__()
@@ -388,13 +387,17 @@ class Frame(QMainWindow, Ui_MainWindow):
         self.btn_corelogramaCom.clicked.connect(self.afisare_corelograma_com)
         self.btn_afScoruri.clicked.connect(self.afisare_scoruri)
         self.btn_plotScoruri.clicked.connect(self.afisare_plot_scoruri)
+        self.model_creat = False
 
     def afisare_plot_scoruri(self):
+        if self.model_creat is False:
+            self.creeaza_model()
         self.t_r_xc = tabelare_matrice(
             self.model_acp.r_xc,
             self.variabile_selectate,
             self.model_acp.etichete_componente,
             "Output/r_xc.csv"
+
         )
         q = self.model_acp.nrcomp_p
         if self.model_acp.nrcomp_c is not None and self.model_acp.nrcomp_c < q:
@@ -402,9 +405,11 @@ class Frame(QMainWindow, Ui_MainWindow):
         if self.model_acp.nrcomp_k is not None and self.model_acp.nrcomp_k < q:
             q = self.model_acp.nrcomp_k
 
-        plot_corelatii(self.t_r_xc, "comp"+self.cbAxa1.currentText(),"comp"+self.cbAxa2.currentText(), aspect=1)
+        plot_instante(self.C, self.cbAxa1.currentIndex(),self.cbAxa2.currentIndex(),nume_instante=self.nume_instante)
 
     def afisare_scoruri(self):
+        if self.model_creat is False:
+            self.creeaza_model()
 
         self.t_scoruri = tabelare_matrice(
             self.model_acp.c / np.sqrt(self.model_acp.alfa),
@@ -419,10 +424,13 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.setLayout(layout1)
         dialog.setModal(True)
         dialog.exec_()
+
     def afisare_corelograma_com(self):
         corelograma(self.comm_t, vmin=0, titlu="Comunalitati")
 
     def afisare_comunalitati(self):
+        if self.model_creat is False:
+            self.creeaza_model()
         r_xc2 = self.model_acp.r_xc * self.model_acp.r_xc
         comm = np.cumsum(r_xc2, axis=1)
         self.comm_t = tabelare_matrice(comm, self.variabile_selectate, self.model_acp.etichete_componente, "Output/comm.csv")
@@ -436,10 +444,13 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.exec_()
 
     def afisare_contributii(self):
+        if self.model_creat is False:
+            self.creeaza_model()
+        self.c2 = self.model_acp.c * self.model_acp.c
         beta = self.c2 * 100 / np.sum(self.c2, axis=0)
         self.beta_t = tabelare_matrice(beta, self.t.index,
                                   self.model_acp.etichete_componente,
-                                  "Output/contrib.csv")
+                                  "Output/contrib.csv",nume_instante=self.nume_instante)
         tabel = mw.Tabel(self.beta_t)
         layout1 = QHBoxLayout()
         layout1.addWidget(tabel)
@@ -450,11 +461,14 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.exec_()
 
     def afisare_cosinusuri(self):
+        if self.model_creat is False:
+            self.creeaza_model()
 
         self.c2 = self.model_acp.c * self.model_acp.c
         cosin = np.transpose(self.c2.T / np.sum(self.c2, axis=1))
+        print(self.t.index)
         self.cosin_t = tabelare_matrice(cosin, self.t.index,
-                                   self.model_acp.etichete_componente, "Output/cosin.csv")
+                                   self.model_acp.etichete_componente, "Output/cosin.csv",nume_instante = self.nume_instante)
         tabel = mw.Tabel(self.cosin_t)
         layout1 = QHBoxLayout()
         layout1.addWidget(tabel)
@@ -463,13 +477,26 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.setLayout(layout1)
         dialog.setModal(True)
         dialog.exec_()
+
     def afisare_corelograma(self):
         corelograma(self.r_xc_t)
+
     def plot_corelatii(self):
         plot_corelatii(self.r_xc_t, "comp"+self.cbAxa1.currentText(),"comp"+self.cbAxa2.currentText(), aspect=1)
 
+    def creeaza_model(self):
+        self.variabile_selectate = controller.selectii_lista(self.lista_selectie)
+        self.m = len(self.variabile_selectate)
+        self.model_acp = acp.acp(self.t, self.variabile_selectate)
+        self.C = self.model_acp.creare_model(std=True, nlib=0)
+        self.coloana_index = self.cbIndex.currentText()
+        self.t.index = [str(v) for v in self.t[self.coloana_index]]
+        self.nume_instante = self.t[self.coloana_index]
+        self.model_creat = True
 
     def afisare_corelatie(self):
+        if self.model_creat is False:
+            self.creeaza_model()
         self.r_xc_t = tabelare_matrice(self.model_acp.r_xc, self.variabile_selectate,
                                   self.model_acp.etichete_componente, "Output/r_xc.csv")
         tabel = mw.Tabel(self.r_xc_t)
@@ -480,54 +507,81 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.setLayout(layout1)
         dialog.setModal(True)
         dialog.exec_()
+
     def afisare_harta(self):
         if self.model_creat is False:
             self.C = self.creare_model()
-
+            self.model_creat = True
         if self.model_creat:
-            shp = GeoDataFrame.from_file("Europa/Europa.shp")
-            print(shp, list(shp), sep="\n")
-            harta(shp, self.C[:, :7], 'Code', self.t.index)
+            dialog =QFileDialog(directory=".")
+            dialog.setFileMode(QFileDialog.AnyFile)
+            dialog.setNameFilter("Shape (*.shp)")
+            dialog.setViewMode(QFileDialog.Detail)
+            fileNames = []
+            if dialog.exec_():
+                fileNames = dialog.selectedFiles()
+            if len(fileNames) == 0:
+                return
+            fisier_shp = fileNames[0]
+            plot_map(fisier_shp, self.C[:, 0:self.k_s], self.nume_instante)
+            grafice.show()
 
-            # plot_map(fisier_shp, self.C[:, 0:self.k_s], [i for i in range(36)])
 
     def selectionChanged(self):
-        # variabile = controller.selectii_lista(self.lista_selectie)
-    #         # controller.init_combo(self.cbAxa1, variabile)
-    #         # controller.init_combo(self.cbAxa2, variabile)
-    #         # self.cbAxa1.setCurrentIndex(0)
-    #         # self.cbAxa2.setCurrentIndex(1)
-        pass
+        self.variabile_selectate = controller.selectii_lista(self.lista_selectie)
+        self.m = len(self.variabile_selectate)
+        for i in range(1, self.m + 1):
+            self.cbAxa1.addItem(str(i))
+            self.cbAxa2.addItem(str(i))
+        self.cbAxa1.setCurrentIndex(0)
+        self.cbAxa2.setCurrentIndex(1)
+
+
+    def citire_fisier_variabile(self,combo=None, lista=None):
+        dialog = QFileDialog(directory=".")
+        dialog.setNameFilter("Fisiere csv (*.csv)")
+        dialog.exec_()
+        fisiere = dialog.selectedFiles()
+        if len(fisiere) > 0:
+            t = pd.read_csv(fisiere[0])
+            variabile = list(t)
+            if combo is not None:
+                combo.clear()
+                combo.addItems(variabile)
+                combo.setCurrentIndex(0)
+            if lista is not None:
+                lista.clear()
+                for v in variabile:
+                    item = QListWidgetItem(lista)
+                    cb = QCheckBox(v)
+                    lista.setItemWidget(item, cb)
+            return t, fisiere[0]
 
     def citire(self):
-        rezultat = controller.citire_fisier_variabile(self.cbIndex, self.lista_selectie)
-        self.tabel_date = rezultat
         self.cbIndex.clear()
+        rezultat = self.citire_fisier_variabile(self.cbIndex, self.lista_selectie)
         if rezultat is not None:
             self.t = rezultat[0]
             functii.nan_replace(self.t)
 
+
     def afisare_plot_varianta(self):
         if self.model_creat is False:
-            self.creare_model()
+            self.creeaza_model()
         if self.model_creat:
             j_Cattel, j_Kaiser = self.model_acp.plot_varianta()
             self.k_s =min(j_Cattel, j_Kaiser)
             self.model_acp.show_grafice()
 
     def afisare_varianta(self):
-        self.variabile_selectate = controller.selectii_lista(self.lista_selectie)
-
-        self.m = len(self.variabile_selectate)
-
+        if self.model_creat is False:
+            self.creeaza_model()
         if self.m < 2:
             msgBox = QMessageBox()
             msgBox.setText("Prea putine variabile selectate!")
             msgBox.exec()
             return
 
-        self.model_acp = acp.acp(self.t, self.variabile_selectate)
-        self.C = self.model_acp.creare_model(std=True, nlib=0)
         tabel_varianta = self.model_acp.tabelare_varianta()
         print(tabel_varianta)
         tabel = mw.Tabel(tabel_varianta)
@@ -538,12 +592,6 @@ class Frame(QMainWindow, Ui_MainWindow):
         dialog.setLayout(layout1)
         dialog.setModal(True)
         dialog.exec_()
-
-        for i in range(1, self.m + 1):
-            self.cbAxa1.addItem(str(i))
-            self.cbAxa2.addItem(str(i))
-        self.cbAxa1.setCurrentIndex(0)
-        self.cbAxa2.setCurrentIndex(1)
         self.model_creat = True
 
 

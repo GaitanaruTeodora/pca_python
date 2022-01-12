@@ -30,19 +30,24 @@ def corelograma(t, vmin=-1, vmax=1, titlu="Corelatii factoriale"):
     ax_ = sb.heatmap(t, vmin=vmin, vmax=vmax, cmap="RdYlBu", annot=True, ax=ax)
     ax_.set_xticklabels(t.columns, rotation=30, ha="right")
     plt.show()
-
-def plot_instante(t, var1, var2, titlu="Plot instante", aspect='auto'):
-    fig = plt.figure(figsize=(13, 8))
-    assert isinstance(fig, plt.Figure)
-    ax = fig.add_subplot(1, 1, 1)
-    assert isinstance(ax, plt.Axes)
-    ax.set_title(titlu, fontdict={"fontsize": 16, "color": "b"})
-    ax.set_xlabel(var1, fontdict={"fontsize": 12, "color": "b"})
-    ax.set_ylabel(var2, fontdict={"fontsize": 12, "color": "b"})
-    ax.set_aspect(aspect)
-    ax.scatter(t[var1], t[var2], c="r")
-    for i in range(len(t)):
-        ax.text(t[var1].iloc[i], t[var2].iloc[i], t.index[i])
+#
+# def plot_instante(t, var1, var2, titlu="Plot instante", aspect='auto',nume_instante=None):
+#     fig = plt.figure(figsize=(13, 8))
+#     assert isinstance(fig, plt.Figure)
+#     ax = fig.add_subplot(1, 1, 1)
+#     assert isinstance(ax, plt.Axes)
+#     ax.set_title(titlu, fontdict={"fontsize": 16, "color": "b"})
+#     ax.set_xlabel(var1, fontdict={"fontsize": 12, "color": "b"})
+#     ax.set_ylabel(var2, fontdict={"fontsize": 12, "color": "b"})
+#     ax.set_aspect(aspect)
+#     ax.scatter(t[var1], t[var2], c="r")
+#     # for i in range(len(t)):
+#     #     ax.text(t[var1].iloc[i], t[var2].iloc[i], t.index[i])
+#     if nume_instante is not None:
+#         m = np.shape(t)[0]
+#         for i in range(m):
+#             ax.text(t[i, var1], t[i, var2], nume_instante[i])
+#     plt.show()
 
 def show():
     plt.show()
@@ -58,4 +63,20 @@ def harta(shp, S, camp_legatura, nume_instante, titlu="Harta scoruri"):
         ax = f.add_subplot(1, 1, 1)
         ax.set_title(titlu + "-" + str(i + 1))
         shp1.plot("v" + str(i + 1), cmap="Reds", ax=ax, legend=True)
+    plt.show()
+
+
+def plot_instante(t, k1=0, k2=1, nume_instante=None):
+    fig = plt.figure(figsize=(11, 8))
+    assert isinstance(fig, plt.Figure)
+    ax = fig.add_subplot(1, 1, 1)
+    assert isinstance(ax, plt.Axes)
+    ax.set_title("Plot instante", fontsize=16)
+    ax.set_xlabel("a" + str(k1 + 1))
+    ax.set_ylabel("a" + str(k2 + 1))
+    ax.scatter(t[:, k1], t[:, k2], c='r')
+    if nume_instante is not None:
+        m = np.shape(t)[0]
+        for i in range(m):
+            ax.text(t[i, k1], t[i, k2], nume_instante[i])
     plt.show()
